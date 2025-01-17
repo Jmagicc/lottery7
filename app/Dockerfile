@@ -8,7 +8,10 @@ WORKDIR /app
 COPY go.mod go.sum ./
 
 # 下载依赖
-RUN go mod download
+# 设置 Go 模块代理并下载依赖
+RUN go env -w GOPROXY=https://goproxy.cn,direct && \
+    go mod download
+
 
 # 复制源代码
 COPY . .
