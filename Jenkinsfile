@@ -36,8 +36,10 @@ pipeline {
         stage('构建Docker镜像') {
             steps {
                 script {
-                    // 使用 Jenkins Job 名称和 Tag 构建 Docker 镜像
-                    sh "docker build -t ${JOB_NAME}:${params.TAG} ."
+                    // 进入 app 目录并构建 Docker 镜像
+                    dir('app') {
+                        sh "docker build -t ${JOB_NAME}:${params.TAG} ."
+                    }
                 }
             }
         }
