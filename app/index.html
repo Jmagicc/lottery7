@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>海南七星彩电子奖表</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .table-container {
+            position: relative;
+            height: calc(100vh - 80px);
+            min-height: 600px;
+        }
+        .lottery-table {
+            height: 100%;
+            overflow-y: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            display: flex;
+            flex-direction: column-reverse;
+        }
+        .lottery-table::-webkit-scrollbar {
+            display: none;
+        }
+        .lottery-table table {
+            margin-top: auto;
+        }
+        .lottery-number {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(145deg, #ff4d4f, #ff1f1f);
+            color: white;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 0 3px;
+            box-shadow: 0 4px 8px rgba(255, 77, 79, 0.3);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        }
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+            touch-action: none;
+        }
+        #canvas.drawing-mode {
+            pointer-events: all;
+        }
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 20;
+        }
+        .draw-date {
+            font-size: 1.25rem;
+            font-weight: 500;
+        }
+        .draw-day {
+            color: #666;
+            font-size: 1rem;
+        }
+        .draw-no {
+            color: #666;
+            font-size: 0.875rem;
+        }
+        @media (max-width: 640px) {
+            .controls {
+                bottom: 10px;
+                right: 10px;
+                left: 10px;
+            }
+            .control-buttons {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .lottery-number {
+                width: 40px;
+                height: 40px;
+                font-size: 1.25rem;
+                margin: 0 2px;
+            }
+            .draw-date {
+                font-size: 1.1rem;
+            }
+        }
+        .lottery-number.bg-gray-200 {
+            background: linear-gradient(145deg, #e5e7eb, #d1d5db);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            font-size: 2rem;
+            font-weight: normal;
+        }
+
+        @media (max-width: 640px) {
+            .lottery-number.bg-gray-200 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4">
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-2xl font-bold">海南七星彩电子奖表</h1>
+            <div class="flex gap-2">
+                <button id="two-bind" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg">
+                    二定
+                </button>
+                <button id="ai-triplet" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg">
+                    AI抓三定
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-lg p-4 table-container">
+            <div class="lottery-table">
+                <table class="w-full">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0 z-10">
+                        <tr>
+                            <th scope="col" class="px-4 py-3">开奖日期</th>
+                            <th scope="col" class="px-4 py-3 text-center">开奖号码</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lottery-results">
+                        <!-- 数据将通过JavaScript动态插入 -->
+                    </tbody>
+                </table>
+            </div>
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <div class="controls">
+            <div class="control-buttons flex gap-4 items-center">
+                <button id="toggle-mode" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm">
+                    开启画笔
+                </button>
+                <button id="clear-canvas" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded text-sm">
+                    清除画布
+                </button>
+                <div class="flex items-center">
+                    <label class="mr-2 text-sm">颜色:</label>
+                    <input type="color" id="color-picker" class="h-8">
+                </div>
+                <div class="flex items-center">
+                    <label class="mr-2 text-sm">粗细:</label>
+                    <input type="range" id="line-width" min="1" max="20" value="2" class="w-24">
+                </div>
+            </div>
+        </div>
+
+        <div id="modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-30">
+            <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                <div class="mt-3">
+                    <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">近期千百位2定未出</h3>
+                    <form id="analysis-form" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">选择期数</label>
+                            <select name="periods" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <option value="30">近30期</option>
+                                <option value="50">近50期</option>
+                                <option value="70">近70期</option>
+                                <option value="100">近100期</option>
+                                <option value="150">近150期</option>
+                                <option value="200">近200期</option>
+                                <option value="300">近300期</option>
+                            </select>
+                        </div>
+                        <div class="flex justify-end space-x-3">
+                            <button type="button" id="modal-close" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded">
+                                取消
+                            </button>
+                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                                近期千百位2定未出
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div id="result" class="mt-4 hidden">
+                    <h4 class="text-md font-medium text-gray-900 mb-2">分析结果：</h4>
+                    <div class="bg-gray-50 p-3 rounded">
+                        <div class="flex justify-between items-center mb-2">
+                            <p class="text-sm text-gray-600">未出现的号码（<span id="unused-count">0</span>个）：</p>
+                            <button onclick="copyResults('unused-numbers')" class="text-blue-600 hover:text-blue-800 text-sm flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path>
+                                </svg>
+                                复制
+                            </button>
+                        </div>
+                        <div id="unused-numbers" class="flex flex-wrap gap-2">
+                            <!-- 结果将在这里显示 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const tableBody = document.getElementById('lottery-results');
+
+            fetch('/api/lottery-results')
+                .then(response => response.json())
+                .then(data => {
+                    const weekDayMap = {
+                        'Monday': '星期一',
+                        'Tuesday': '星期二',
+                        'Wednesday': '星期三',
+                        'Thursday': '星期四',
+                        'Friday': '星期五',
+                        'Saturday': '星期六',
+                        'Sunday': '星期日'
+                    };
+
+                    // 获取最新一期数据用于计算下一期（不需要改变，因为data[0]本来就是最新的）
+                    const lastResult = data[0];
+                    const lastDrawDate = new Date(lastResult.draw_date);
+                    const nextDrawDate = new Date(lastDrawDate);
+                    nextDrawDate.setDate(lastDrawDate.getDate() + 2);
+                    const nextDrawNo = (parseInt(lastResult.draw_no) + 1).toString();
+
+                    // 先倒排数据
+                    const reversedData = [...data].reverse();
+
+                    // 添加历史数据
+                    reversedData.forEach(result => {
+                        const row = document.createElement('tr');
+                        row.className = 'border-b hover:bg-gray-50';
+                        row.innerHTML = `
+                            <td class="px-4 py-4">
+                                <div class="draw-date">${result.draw_date}</div>
+                                <div class="draw-day">${weekDayMap[result.draw_day]}</div>
+                                <div class="draw-no">第 ${result.draw_no} 期</div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <div class="flex justify-center gap-2">
+                                    <span class="lottery-number">${result.num1}</span>
+                                    <span class="lottery-number">${result.num2}</span>
+                                    <span class="lottery-number">${result.num3}</span>
+                                    <span class="lottery-number">${result.num4}</span>
+                                </div>
+                            </td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+
+                    // 最后添加下一期预留行
+                    const nextRow = document.createElement('tr');
+                    nextRow.className = 'border-b bg-gray-50';
+                    nextRow.innerHTML = `
+                        <td class="px-4 py-4">
+                            <div class="draw-date">${nextDrawDate.toISOString().split('T')[0]}</div>
+                            <div class="draw-day">${weekDayMap[nextDrawDate.toLocaleString('en-US', {weekday: 'long'})]}</div>
+                            <div class="draw-no">第 ${nextDrawNo} 期</div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="flex justify-center gap-2">
+                                <span class="lottery-number bg-gray-200 text-gray-400">?</span>
+                                <span class="lottery-number bg-gray-200 text-gray-400">?</span>
+                                <span class="lottery-number bg-gray-200 text-gray-400">?</span>
+                                <span class="lottery-number bg-gray-200 text-gray-400">?</span>
+                            </div>
+                        </td>
+                    `;
+                    tableBody.appendChild(nextRow);
+
+                    // 滚动到底部
+                    const lotteryTable = document.querySelector('.lottery-table');
+                    lotteryTable.scrollTop = lotteryTable.scrollHeight;
+                });
+
+            // 画布功能
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            const colorPicker = document.getElementById('color-picker');
+            const lineWidth = document.getElementById('line-width');
+            const toggleMode = document.getElementById('toggle-mode');
+            let isDrawing = false;
+            let isDrawingMode = false;
+            let lastX = 0;
+            let lastY = 0;
+
+            // 设置画布大小
+            function resizeCanvas() {
+                const container = canvas.parentElement;
+                canvas.width = container.clientWidth;
+                canvas.height = container.clientHeight;
+            }
+
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            // 切换绘画模式
+            toggleMode.addEventListener('click', () => {
+                isDrawingMode = !isDrawingMode;
+                canvas.classList.toggle('drawing-mode');
+                toggleMode.textContent = isDrawingMode ? '关闭画笔' : '开启画笔';
+                toggleMode.classList.toggle('bg-blue-500');
+                toggleMode.classList.toggle('bg-gray-500');
+            });
+
+            // 处理触摸事件
+            function getTouchPos(e) {
+                const rect = canvas.getBoundingClientRect();
+                const touch = e.touches[0];
+                return {
+                    x: touch.clientX - rect.left,
+                    y: touch.clientY - rect.top
+                };
+            }
+
+            function drawTouch(e) {
+                if (!isDrawing || !isDrawingMode) return;
+                e.preventDefault();
+
+                const pos = getTouchPos(e);
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.strokeStyle = colorPicker.value;
+                ctx.lineWidth = lineWidth.value;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+
+                [lastX, lastY] = [pos.x, pos.y];
+            }
+
+            function draw(e) {
+                if (!isDrawing || !isDrawingMode) return;
+
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(x, y);
+                ctx.strokeStyle = colorPicker.value;
+                ctx.lineWidth = lineWidth.value;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+
+                [lastX, lastY] = [x, y];
+            }
+
+            // 鼠标事件
+            canvas.addEventListener('mousedown', (e) => {
+                if (!isDrawingMode) return;
+                isDrawing = true;
+                const rect = canvas.getBoundingClientRect();
+                [lastX, lastY] = [e.clientX - rect.left, e.clientY - rect.top];
+            });
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', () => isDrawing = false);
+            canvas.addEventListener('mouseout', () => isDrawing = false);
+
+            // 触摸事件
+            canvas.addEventListener('touchstart', (e) => {
+                if (!isDrawingMode) return;
+                isDrawing = true;
+                const pos = getTouchPos(e);
+                [lastX, lastY] = [pos.x, pos.y];
+                e.preventDefault();
+            }, { passive: false });
+            canvas.addEventListener('touchmove', drawTouch, { passive: false });
+            canvas.addEventListener('touchend', () => isDrawing = false);
+            canvas.addEventListener('touchcancel', () => isDrawing = false);
+
+            document.getElementById('clear-canvas').addEventListener('click', () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            });
+        });
+
+        // AI 助手相关代码
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('modal');
+            const twobind = document.getElementById('two-bind');
+            const modalClose = document.getElementById('modal-close');
+            const analysisForm = document.getElementById('analysis-form');
+            const resultDiv = document.getElementById('result');
+            const unusedNumbers = document.getElementById('unused-numbers');
+            const unusedCount = document.getElementById('unused-count');
+
+            // 显示模态框
+            twobind.addEventListener('click', () => {
+                modal.classList.remove('hidden');
+                resultDiv.classList.add('hidden');
+            });
+
+            // 关闭模态框
+            modalClose.addEventListener('click', () => {
+                modal.classList.add('hidden');
+            });
+
+            // 点击模态框外部关闭
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.add('hidden');
+                }
+            });
+
+            // 表单提交
+            analysisForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const periods = analysisForm.periods.value;
+
+                try {
+                    const response = await fetch(`/api/unused-numbers?periods=${periods}`);
+                    const data = await response.json();
+
+                    // 显示结果
+                    unusedCount.textContent = data.count;
+                    unusedNumbers.innerHTML = data.unusedNumbers
+                        .map(num => `<span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded">${num}</span>`)
+                        .join('');
+
+                    resultDiv.classList.remove('hidden');
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('获取数据失败');
+                }
+            });
+        });
+
+        const aiTriplet = document.getElementById('ai-triplet');
+
+        aiTriplet.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/matrix');
+                const data = await response.json();
+                
+                // 显示结果
+                const resultHtml = data.predictions
+                    .map(num => `<span class="inline-block bg-green-100 text-green-800 px-2 py-1 rounded">${num}</span>`)
+                    .join('');
+                    
+                // 创建或更新结果显示区域
+                let tripletResult = document.getElementById('triplet-result');
+                if (!tripletResult) {
+                    tripletResult = document.createElement('div');
+                    tripletResult.id = 'triplet-result';
+                    tripletResult.className = 'fixed top-20 right-4 p-4 bg-white rounded-lg shadow-lg z-50 max-w-md';
+                    document.body.appendChild(tripletResult);
+                }
+                
+                tripletResult.innerHTML = `
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-lg font-medium">AI 预测结果</h3>
+                        <div class="flex items-center gap-2">
+                            <button onclick="copyResults('triplet-numbers')" class="text-green-600 hover:text-green-800 text-sm flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path>
+                                </svg>
+                                复制
+                            </button>
+                            <button onclick="this.closest('#triplet-result').remove()" class="text-gray-500 hover:text-gray-700">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="triplet-numbers" class="flex flex-wrap gap-2">
+                        ${resultHtml}
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error:', error);
+                alert('获取预测结果失败');
+            }
+        });
+
+        // 在 script 标签内添加复制功能函数
+        function copyResults(elementId) {
+            const element = document.getElementById(elementId);
+            const numbers = Array.from(element.children)
+                .map(span => span.textContent.trim())
+                .join(', ');
+
+            // 创建临时输入框
+            const tempInput = document.createElement('textarea');
+            tempInput.value = numbers;
+            document.body.appendChild(tempInput);
+            
+            // 选择并复制文本
+            tempInput.select();
+            document.execCommand('copy');
+            
+            // 移除临时输入框
+            document.body.removeChild(tempInput);
+
+            // 显示复制成功提示
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg z-50';
+            toast.textContent = '复制成功';
+            document.body.appendChild(toast);
+
+            // 2秒后移除提示
+            setTimeout(() => {
+                toast.remove();
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

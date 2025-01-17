@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "lottery7"
+version = "0.1.0"
+description = "Lottery data collector"
+authors = ["fucewei<fucewei98@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+requests = "^2.31.0"
+beautifulsoup4 = "^4.12.3"
+mysql-connector-python = "^8.3.0"
+
+[tool.poetry.group.dev.dependencies]
+pyinstaller = "^6.11.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api" 

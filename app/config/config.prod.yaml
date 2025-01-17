@@ -1,0 +1,5 @@
+deepseek:
+  api_key: "your-prod-api-key"
+
+database:
+  dsn: "username:password@tcp(database_host:3306)/database_name?charset=utf8mb4&parseTime=True&loc=Local" 

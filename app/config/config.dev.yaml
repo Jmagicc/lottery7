@@ -1,0 +1,5 @@
+deepseek:
+  api_key: "7G5uDeyAtYl4GwpUJXRbhYJcDSzx5VpTj4Ij6/StjCny4ZWHlBpuOSJfn9wEiqv2"
+
+database:
+  dsn: "lottery7:EniQXpY6x8rMjMsz@tcp(192.168.0.200:3306)/lottery7?charset=utf8mb4&parseTime=True&loc=Local"
