@@ -151,7 +151,6 @@
 <body class="bg-gray-100">
     <div class="container mx-auto p-4">
         <div class="flex justify-between items-center mb-4">
-            <h1 class="text-2xl font-bold">七星彩电子奖表</h1>
             <div class="flex gap-2">
                 <button id="two-bind" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg">
                     二定
@@ -333,20 +332,20 @@
 
                     // 最后添加下一期预留行
                     const nextRow = document.createElement('tr');
-                    nextRow.className = 'border-b bg-gray-50';
+                    nextRow.className = 'border-b hover:bg-gray-50';
                     nextRow.innerHTML = `
-                        <td class="px-4 py-4">
-                            <div class="draw-date">${nextDrawDate.toISOString().split('T')[0]}</div>
-                            <div class="draw-day">${weekDayMap[nextDrawDate.toLocaleString('en-US', {weekday: 'long'})]}</div>
-                            <div class="draw-no">第 ${nextDrawNo} 期</div>
+                        <td class="px-4 py-6">
+                            <div class="draw-date text-gray-600">${nextDrawDate.toISOString().split('T')[0]}</div>
+                            <div class="draw-day text-gray-600">${weekDayMap[nextDrawDate.toLocaleString('en-US', {weekday: 'long'})]}</div>
+                            <div class="draw-no text-gray-600">第 ${nextDrawNo} 期</div>
                         </td>
                         <td class="px-4 py-4">
                             <div class="flex justify-center gap-2">
-                                <span class="lottery-number bg-gray-200 text-gray-400">?</span>
-                                <span class="lottery-number bg-gray-200 text-gray-400">?</span>
-                                <span class="lottery-number bg-gray-200 text-gray-400">?</span>
-                                <span class="lottery-number bg-gray-200 text-gray-400">?</span>
-                                <span class="lottery-number basketball bg-gray-200 text-gray-400">?</span>
+                                <span class="lottery-number bg-gray-200 text-gray-500 ">?</span>
+                                <span class="lottery-number bg-gray-200 text-gray-500 ">?</span>
+                                <span class="lottery-number bg-gray-200 text-gray-500 ">?</span>
+                                <span class="lottery-number bg-gray-200 text-gray-500 ">?</span>
+                                <span class="lottery-number basketball bg-gray-200 text-gray-500">?</span>
                             </div>
                         </td>
                     `;
