@@ -154,3 +154,13 @@ func (h *LotteryHandler) callDeepSeekAPI(apiKey, prompt, query string) (string, 
 
 	return "", nil
 }
+
+func (h *LotteryHandler) GetRepeatNumbers(c *gin.Context) {
+	response, err := h.service.GetRepeatNumbers()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}

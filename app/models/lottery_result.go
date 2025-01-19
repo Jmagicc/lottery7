@@ -12,5 +12,6 @@ type LotteryResult struct {
 	Num2      uint8     `gorm:"not null"`
 	Num3      uint8     `gorm:"not null"`
 	Num4      uint8     `gorm:"not null"`
+	Num5      uint8     `gorm:"not null"`
 	CreatedAt time.Time `gorm:"type:timestamp;default:CURRENT_TIMESTAMP"`
 }

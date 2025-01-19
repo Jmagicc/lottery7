@@ -31,9 +31,9 @@ def get_latest_draw():
         draw_date = datetime.strptime(date_text.split(': ')[1][:10], '%Y-%m-%d').date()
         
         # 获取开奖号码
-        number_elements = soup.select('.vRes_lottery_ball b.red')[:4]  # 只取前4个数字
-        if len(number_elements) < 4:
-            raise Exception(f"开奖号码不完整，仅找到 {len(number_elements)} 个号码")
+        number_elements = soup.select('.vRes_lottery_ball b.red')[:5]  # 只取前5个数字
+        if len(number_elements) != 5:
+            raise Exception(f"开奖号码数量不正确，期望5个但找到 {len(number_elements)} 个号码")
         
         num_list = [int(num.text.strip()) for num in number_elements]
         
@@ -62,6 +62,7 @@ def create_table_if_not_exists(cursor):
         num2 tinyint unsigned NOT NULL COMMENT '第2位数字',
         num3 tinyint unsigned NOT NULL COMMENT '第3位数字',
         num4 tinyint unsigned NOT NULL COMMENT '第4位数字',
+        num5 tinyint unsigned NOT NULL COMMENT '第5位数字',
         created_at timestamp NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
         UNIQUE KEY draw_no (draw_no),
@@ -105,11 +106,11 @@ def main():
         # 创建表（如果不存在）
         create_table_if_not_exists(cursor)
         
-        # 插入开奖结果
+        # 使用 INSERT IGNORE 来处理重复数据
         insert_query = """
-        INSERT INTO lottery_results 
-        (draw_no, draw_date, num1, num2, num3, num4)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        INSERT IGNORE INTO lottery_results 
+        (draw_no, draw_date, num1, num2, num3, num4, num5)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
         """
         
         values = (
@@ -118,15 +119,23 @@ def main():
             draw_info['numbers'][0],
             draw_info['numbers'][1],
             draw_info['numbers'][2],
-            draw_info['numbers'][3]
+            draw_info['numbers'][3],
+            draw_info['numbers'][4]  # 修正为第5个数字
         )
         
-        cursor.execute(insert_query, values)
-        connection.commit()
-        print(f"成功插入开奖结果：期号={draw_info['draw_no']}, 日期={draw_info['draw_date']}, 号码={draw_info['numbers']}")
+        result = cursor.execute(insert_query, values)
+        if result == 0:
+            print(f"期号 {draw_info['draw_no']} 的数据已存在，跳过插入")
+        else:
+            connection.commit()
+            print(f"成功插入开奖结果：期号={draw_info['draw_no']}, 日期={draw_info['draw_date']}, 号码={draw_info['numbers']}")
         
+    except pymysql.err.OperationalError as e:
+        print(f"数据库连接错误: {e}")
+    except pymysql.err.IntegrityError as e:
+        print(f"数据完整性错误（可能是重复数据）: {e}")
     except Error as e:
-        print(f"数据库错误: {e}")
+        print(f"其他数据库错误: {e}")
     finally:
         if 'connection' in locals():  # 如果连接存在
             cursor.close()

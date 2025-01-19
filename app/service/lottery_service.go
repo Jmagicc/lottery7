@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"lottery7/dto"
 	"lottery7/models"
+	"sort"
 	"strings"
 
 	"gorm.io/gorm"
@@ -33,6 +34,7 @@ func (s *LotteryService) GetLotteryResults() ([]dto.LotteryResultResponse, error
 			Num2:     result.Num2,
 			Num3:     result.Num3,
 			Num4:     result.Num4,
+			Num5:     result.Num5,
 		})
 	}
 
@@ -86,11 +88,11 @@ func (s *LotteryService) GetNumberMatrix() (*dto.MatrixResponse, error) {
 
 	var matrix []string
 	for _, result := range results {
-		row := fmt.Sprintf("%d %d %d %d",
-			result.Num1, result.Num2, result.Num3, result.Num4)
+		row := fmt.Sprintf("%d %d %d %d %d",
+			result.Num1, result.Num2, result.Num3, result.Num4, result.Num5)
 		matrix = append(matrix, row)
 	}
-	matrix = append(matrix, "? ? ? ?")
+	matrix = append(matrix, "? ? ? ? ?")
 
 	var tripletCounts []struct {
 		NumTriplet   string `gorm:"column:num_triplet"`
@@ -120,7 +122,7 @@ func (s *LotteryService) GetNumberMatrix() (*dto.MatrixResponse, error) {
 		Matrix: matrix,
 		Prompt: fmt.Sprintf(`你是一位顶级数学家和概率学家，擅长从复杂数据中识别隐藏规律。现在，你面对一个特殊的矩阵排列，其元素看似随机但实则遵循某种深层规律。
 
-		请仔细观察以下矩阵，并运用你的专业知识和洞察力，预测出其中的规律。这个矩阵每一行有四位，每一位都是0-9：
+		请仔细观察以下矩阵，并运用你的专业知识和洞察力，预测出其中的规律。这个矩阵每一行有五位，每一位都是0-9：
 
 		%s
 
@@ -130,7 +132,75 @@ func (s *LotteryService) GetNumberMatrix() (*dto.MatrixResponse, error) {
 
 		基于以上数据，请分析：
 		1. 矩阵中的数字排列规律
-		2. 算出问号中有可能出现的三定组合
+		2. 算出问号中有可能出现的前三位的定组合
 		`, matrixStr, tripletStr.String()),
 	}, nil
+}
+
+func (s *LotteryService) GetRepeatNumbers() (*dto.RepeatNumbersResponse, error) {
+	var results []models.LotteryResult
+	if err := s.db.Order("draw_date desc").Limit(200).Find(&results).Error; err != nil {
+		return nil, err
+	}
+
+	doubleStats := make(map[string]int)
+	tripleStats := make(map[string]int)
+
+	for _, result := range results {
+		numStr := fmt.Sprintf("%d%d%d%d", result.Num1, result.Num2, result.Num3, result.Num4)
+
+		for i := 0; i < len(numStr)-1; i++ {
+			for j := i + 1; j < len(numStr); j++ {
+				if numStr[i] == numStr[j] {
+					doubleNum := string(numStr[i]) + string(numStr[i])
+					doubleStats[doubleNum]++
+				}
+			}
+		}
+
+		for i := 0; i < len(numStr)-2; i++ {
+			for j := i + 1; j < len(numStr)-1; j++ {
+				for k := j + 1; k < len(numStr); k++ {
+					if numStr[i] == numStr[j] && numStr[j] == numStr[k] {
+						tripleNum := string(numStr[i]) + string(numStr[i]) + string(numStr[i])
+						tripleStats[tripleNum]++
+					}
+				}
+			}
+		}
+	}
+
+	totalPeriods := len(results)
+	var response dto.RepeatNumbersResponse
+	response.TotalPeriods = totalPeriods
+
+	for num, count := range doubleStats {
+		response.DoubleNumbers = append(response.DoubleNumbers, dto.RepeatNumberStat{
+			Number:    num,
+			Count:     count,
+			Frequency: float64(count) / float64(totalPeriods),
+		})
+	}
+
+	for num, count := range tripleStats {
+		response.TripleNumbers = append(response.TripleNumbers, dto.RepeatNumberStat{
+			Number:    num,
+			Count:     count,
+			Frequency: float64(count) / float64(totalPeriods),
+		})
+	}
+
+	if response.TripleNumbers == nil {
+		response.TripleNumbers = make([]dto.RepeatNumberStat, 0)
+	}
+
+	sort.Slice(response.DoubleNumbers, func(i, j int) bool {
+		return response.DoubleNumbers[i].Number < response.DoubleNumbers[j].Number
+	})
+
+	sort.Slice(response.TripleNumbers, func(i, j int) bool {
+		return response.TripleNumbers[i].Number < response.TripleNumbers[j].Number
+	})
+
+	return &response, nil
 }
