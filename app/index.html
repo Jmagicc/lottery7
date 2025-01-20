@@ -279,6 +279,25 @@
                 </div>
             </div>
         </div>
+
+        <div id="license-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white p-8 rounded-lg shadow-xl max-w-md w-full">
+                <h2 class="text-2xl font-bold mb-4">请输入会员密钥</h2>
+                <div class="mb-4">
+                    <input type="text" id="license-key" class="w-full p-2 border rounded" placeholder="请输入或粘贴密钥">
+                </div>
+                <button id="validate-key" class="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
+                    验证密钥
+                </button>
+                <div id="license-error" class="mt-2 text-red-500 hidden"></div>
+            </div>
+        </div>
+
+        <div id="license-info" class="fixed top-4 right-4 bg-white p-2 rounded shadow-lg hidden">
+            <span class="text-sm text-gray-600">会员剩余：</span>
+            <span id="remaining-days" class="font-bold text-blue-600"></span>
+            <span class="text-sm text-gray-600">天</span>
+        </div>
     </div>
 
     <script>
@@ -643,6 +662,64 @@
                     repeatModal.classList.add('hidden');
                 }
             });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const licenseModal = document.getElementById('license-modal');
+            const licenseKey = document.getElementById('license-key');
+            const validateKeyBtn = document.getElementById('validate-key');
+            const licenseError = document.getElementById('license-error');
+            const licenseInfo = document.getElementById('license-info');
+            const remainingDays = document.getElementById('remaining-days');
+
+            // 从 localStorage 获取密钥
+            const savedKey = localStorage.getItem('licenseKey');
+            if (savedKey) {
+                validateKey(savedKey);
+            }
+
+            // 自动从剪贴板获取密钥
+            navigator.clipboard.readText().then(text => {
+                if (text && text.length === 8) {  // 密钥长度为8个字符
+                    licenseKey.value = text;
+                }
+            }).catch(() => {
+                // 忽略剪贴板读取错误
+            });
+
+            validateKeyBtn.addEventListener('click', () => {
+                const key = licenseKey.value.trim();
+                validateKey(key);
+            });
+
+            function validateKey(key) {
+                fetch(`/api/validate-key?key=${key}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+                        
+                        // 保存密钥
+                        localStorage.setItem('licenseKey', key);
+                        
+                        // 隐藏模态框
+                        licenseModal.classList.add('hidden');
+                        
+                        // 显示会员信息
+                        licenseInfo.classList.remove('hidden');
+                        remainingDays.textContent = data.remaining_days;
+                        
+                        // 如果剩余天数小于等于7天，显示红色
+                        if (data.remaining_days <= 7) {
+                            remainingDays.classList.add('text-red-600');
+                        }
+                    })
+                    .catch(error => {
+                        licenseError.textContent = error.message;
+                        licenseError.classList.remove('hidden');
+                    });
+            }
         });
     </script>
 </body>

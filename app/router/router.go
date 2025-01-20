@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter(lotteryHandler *handler.LotteryHandler) *gin.Engine {
+func SetupRouter(lotteryHandler *handler.LotteryHandler, licenseHandler *handler.LicenseHandler) *gin.Engine {
 	r := gin.Default()
 
 	// API 路由组
@@ -16,6 +16,7 @@ func SetupRouter(lotteryHandler *handler.LotteryHandler) *gin.Engine {
 		api.GET("/unused-numbers", lotteryHandler.GetUnusedNumbers)
 		api.GET("/matrix", lotteryHandler.GetNumberMatrix)
 		api.GET("/repeat-numbers", lotteryHandler.GetRepeatNumbers)
+		api.GET("/validate-key", licenseHandler.ValidateKey)
 	}
 
 	// 所有其他路由返回 index.html

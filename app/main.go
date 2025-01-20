@@ -42,14 +42,17 @@ func main() {
 	}
 
 	// 自动迁移
-	db.AutoMigrate(&models.LotteryResult{})
+	db.AutoMigrate(&models.LotteryResult{}, &models.LicenseKey{})
 
 	// 初始化服务和处理器
 	lotteryService := service.NewLotteryService(db)
+	licenseService := service.NewLicenseService(db)
+
 	lotteryHandler := handler.NewLotteryHandler(lotteryService)
+	licenseHandler := handler.NewLicenseHandler(licenseService)
 
 	// 设置路由
-	r := router.SetupRouter(lotteryHandler)
+	r := router.SetupRouter(lotteryHandler, licenseHandler)
 
 	// 启动服务器
 	fmt.Println("Server is running on port 10025")

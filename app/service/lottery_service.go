@@ -147,25 +147,26 @@ func (s *LotteryService) GetRepeatNumbers() (*dto.RepeatNumbersResponse, error) 
 	tripleStats := make(map[string]int)
 
 	for _, result := range results {
-		numStr := fmt.Sprintf("%d%d%d%d", result.Num1, result.Num2, result.Num3, result.Num4)
+		// 创建数字计数map
+		numCount := make(map[int]int)
 
-		for i := 0; i < len(numStr)-1; i++ {
-			for j := i + 1; j < len(numStr); j++ {
-				if numStr[i] == numStr[j] {
-					doubleNum := string(numStr[i]) + string(numStr[i])
-					doubleStats[doubleNum]++
-				}
-			}
+		// 统计每个数字出现的次数
+		nums := []int{int(result.Num1), int(result.Num2), int(result.Num3), int(result.Num4)}
+		for _, num := range nums {
+			numCount[num]++
 		}
 
-		for i := 0; i < len(numStr)-2; i++ {
-			for j := i + 1; j < len(numStr)-1; j++ {
-				for k := j + 1; k < len(numStr); k++ {
-					if numStr[i] == numStr[j] && numStr[j] == numStr[k] {
-						tripleNum := string(numStr[i]) + string(numStr[i]) + string(numStr[i])
-						tripleStats[tripleNum]++
-					}
-				}
+		// 检查重复
+		for num, count := range numCount {
+			if count == 2 {
+				// 双重数：将数字转为两位相同数字的字符串
+				doubleNum := fmt.Sprintf("%d%d", num, num)
+				doubleStats[doubleNum]++
+			}
+			if count == 3 {
+				// 三重数：将数字转为三位相同数字的字符串
+				tripleNum := fmt.Sprintf("%d%d%d", num, num, num)
+				tripleStats[tripleNum]++
 			}
 		}
 	}

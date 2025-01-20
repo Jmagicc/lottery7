@@ -8,3 +8,9 @@
 - 详细的运行日志
 - 使用Poetry进行依赖管理
 - 支持编译为独立二进制文件
+
+
+## 生成密钥
+```
+ go test -v ./service -run TestGenerateKey
+```
