@@ -678,14 +678,24 @@
                 validateKey(savedKey);
             }
 
-            // 自动从剪贴板获取密钥
-            navigator.clipboard.readText().then(text => {
-                if (text && text.length === 8) {  // 密钥长度为8个字符
-                    licenseKey.value = text;
-                }
-            }).catch(() => {
-                // 忽略剪贴板读取错误
-            });
+            // 检查剪贴板API是否可用，然后尝试读取
+            if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+                navigator.clipboard.readText().then(text => {
+                    if (text && text.length === 8) {
+                        licenseKey.value = text;
+                    }
+                }).catch(() => {
+                    // 忽略剪贴板读取错误
+                });
+            } else {
+                // 后备方案：使用paste事件
+                document.addEventListener('paste', (e) => {
+                    const text = e.clipboardData.getData('text');
+                    if (text && text.length === 8) {
+                        licenseKey.value = text;
+                    }
+                });
+            }
 
             // 确保按钮元素存在
             if (!validateKeyBtn) {
