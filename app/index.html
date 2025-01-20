@@ -687,14 +687,30 @@
                 // 忽略剪贴板读取错误
             });
 
-            validateKeyBtn.addEventListener('click', () => {
+            // 确保按钮元素存在
+            if (!validateKeyBtn) {
+                console.error('Validate key button not found');
+                return;
+            }
+
+            // 添加点击事件监听器
+            validateKeyBtn.addEventListener('click', function() {
+                console.log('Validate button clicked'); // 添加调试日志
                 const key = licenseKey.value.trim();
+                if (!key) {
+                    licenseError.textContent = '请输入密钥';
+                    licenseError.classList.remove('hidden');
+                    return;
+                }
                 validateKey(key);
             });
 
+            // 将 validateKey 函数移到这里
             function validateKey(key) {
                 fetch(`/api/validate-key?key=${key}`)
-                    .then(response => response.json())
+                    .then(response => {
+                        return response.json();
+                    })
                     .then(data => {
                         if (data.error) {
                             throw new Error(data.error);
