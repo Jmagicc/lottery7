@@ -10,42 +10,42 @@ def get_latest_draw():
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
     }
-    
+
     try:
         response = requests.get(url, headers=headers)
         response.raise_for_status()
-        
+
         soup = BeautifulSoup(response.text, 'html.parser')
-        
+
         # 获取开奖信息
         draw_info_div = soup.select_one('.vResult_listDigit_title')
         if not draw_info_div:
             raise Exception("未找到开奖信息区域")
-        
+
         # 获取期号
         period_text = draw_info_div.find('i').text.strip()  # "七星彩开奖结果第24151期"
         draw_no = period_text.split('第')[1].replace('期', '')  # 提取期号 "24151"
-        
+
         # 获取开奖时间
         date_text = draw_info_div.find('span').text.strip()  # "开奖时间: 2024-12-31 20:30:00"
         draw_date = datetime.strptime(date_text.split(': ')[1][:10], '%Y-%m-%d').date()
-        
+
         # 获取开奖号码
         number_elements = soup.select('.vRes_lottery_ball b.red')[:5]  # 只取前5个数字
         if len(number_elements) != 5:
             raise Exception(f"开奖号码数量不正确，期望5个但找到 {len(number_elements)} 个号码")
-        
+
         num_list = [int(num.text.strip()) for num in number_elements]
-        
+
         result = {
             'draw_date': draw_date,
             'draw_no': draw_no,
             'numbers': num_list
         }
-        
+
         print(f"抓取到的数据：期号={draw_no}, 日期={draw_date}, 号码={num_list}")
         return result
-        
+
     except Exception as e:
         print(f"抓取数据时出错: {e}")
         print(f"请求URL: {url}")
@@ -90,43 +90,43 @@ def get_draw_by_period(period):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
     }
-    
+
     try:
         response = requests.get(url, headers=headers)
         response.raise_for_status()
-        
+
         soup = BeautifulSoup(response.text, 'html.parser')
-        
+
         # 获取开奖信息
         draw_info_div = soup.select_one('.vResult_listDigit_title')
         if not draw_info_div:
             return None
-        
+
         # 获取期号
         period_text = draw_info_div.find('i').text.strip()
         draw_no = period_text.split('第')[1].replace('期', '')
-        
+
         # 如果返回的期号与请求的不一致，说明该期尚未开奖
         if draw_no != str(period):
             return None
-        
+
         # 获取开奖时间
         date_text = draw_info_div.find('span').text.strip()
         draw_date = datetime.strptime(date_text.split(': ')[1][:10], '%Y-%m-%d').date()
-        
+
         # 获取开奖号码
         number_elements = soup.select('.vRes_lottery_ball b.red')[:5]
         if len(number_elements) != 5:
             return None
-        
+
         num_list = [int(num.text.strip()) for num in number_elements]
-        
+
         return {
             'draw_date': draw_date,
             'draw_no': draw_no,
             'numbers': num_list
         }
-        
+
     except Exception as e:
         print(f"抓取期号 {period} 数据时出错: {e}")
         return None
@@ -141,42 +141,42 @@ def main():
         'database': 'lottery7',
         'charset': 'utf8mb4'
     }
-    
+
     try:
         # 建立数据库连接
         connection = pymysql.connect(**db_config)
         cursor = connection.cursor()
-        
+
         # 创建表（如果不存在）
         create_table_if_not_exists(cursor)
-        
+
         # 获取数据库中最新的期号
         latest_db_draw = get_latest_draw_from_db(cursor)
-        
+
         # 获取网站最新开奖信息
         latest_web_draw = get_latest_draw()
         if not latest_web_draw:
             print("获取网站最新开奖信息失败")
             return
-            
+
         latest_web_period = int(latest_web_draw['draw_no'])
         start_period = int(latest_db_draw) + 1 if latest_db_draw else latest_web_period
-        
+
         print(f"开始同步期号范围: {start_period} - {latest_web_period}")
-        
+
         sync_count = 0
         # 从数据库最新期号的下一期开始，直到网站最新期号
         for period in range(start_period, latest_web_period + 1):
             draw_info = get_draw_by_period(period)
             if not draw_info:
                 continue
-                
+
             insert_query = """
             INSERT IGNORE INTO lottery_results 
             (draw_no, draw_date, num1, num2, num3, num4, num5)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
             """
-            
+
             values = (
                 draw_info['draw_no'],
                 draw_info['draw_date'],
@@ -186,15 +186,15 @@ def main():
                 draw_info['numbers'][3],
                 draw_info['numbers'][4]
             )
-            
+
             result = cursor.execute(insert_query, values)
             if result == 1:
                 sync_count += 1
                 print(f"成功同步期号 {draw_info['draw_no']}: 日期={draw_info['draw_date']}, 号码={draw_info['numbers']}")
                 connection.commit()
-            
+
         print(f"\n同步完成！共同步了 {sync_count} 期开奖数据")
-        
+
     except pymysql.err.OperationalError as e:
         print(f"数据库连接错误: {e}")
     except pymysql.err.IntegrityError as e:
@@ -208,4 +208,4 @@ def main():
             print("数据库连接已关闭")
 
 if __name__ == "__main__":
-    main() 
+    main()

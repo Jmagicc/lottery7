@@ -3,6 +3,8 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 	"io/ioutil"
 	"lottery7/crypto"
 	"lottery7/dto"
@@ -10,9 +12,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-
-	"github.com/gin-gonic/gin"
-	"github.com/spf13/viper"
 )
 
 type LotteryHandler struct {
@@ -74,7 +73,7 @@ func (h *LotteryHandler) GetNumberMatrix(c *gin.Context) {
 		return
 	}
 
-	query := "请你根据这个矩阵，找规律，要求只算出前三个?，大概率的组成会有哪些。请从历史上出现过的三定组合的范围中给出答案。不需要你说明为什么。请注意，只告诉我10个结果，并用逗号拼接。"
+	query := "请你根据这个矩阵，找规律，大概率的组成会有哪些(输出三位数为一组)。不需要你说明为什么。请注意，请不要输出其他无关东西,只告诉我5组不同的结果，并用逗号拼接。"
 
 	aiResponse, err := h.callDeepSeekAPI(apiKey, matrixResponse.Prompt, query)
 	if err != nil {
@@ -109,6 +108,8 @@ func (h *LotteryHandler) GetNumberMatrix(c *gin.Context) {
 func (h *LotteryHandler) callDeepSeekAPI(apiKey, prompt, query string) (string, error) {
 	messages := []dto.DeepSeekMessage{
 		{Role: "system", Content: prompt},
+		//{Role: "system", Content: query},
+		//{Role: "user", Content: query},
 		{Role: "user", Content: query},
 	}
 

@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"lottery7/dto"
 	"lottery7/models"
+	"math/rand"
 	"sort"
 	"strings"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -92,48 +94,58 @@ func (s *LotteryService) GetNumberMatrix() (*dto.MatrixResponse, error) {
 			result.Num1, result.Num2, result.Num3, result.Num4, result.Num5)
 		matrix = append(matrix, row)
 	}
+	// 翻转 matrix
+	for i, j := 0, len(matrix)-1; i < j; i, j = i+1, j-1 {
+		matrix[i], matrix[j] = matrix[j], matrix[i]
+	}
 	matrix = append(matrix, "? ? ? ? ?")
-
-	var tripletCounts []struct {
-		NumTriplet   string `gorm:"column:num_triplet"`
-		TripletCount int    `gorm:"column:triplet_count"`
-	}
-
-	if err := s.db.Raw(`
-		SELECT num_triplet, triplet_count
-		FROM lottery_number_triplet_counts
-		WHERE triplet_count >= 1
-	`).Scan(&tripletCounts).Error; err != nil {
-		return nil, err
-	}
-
-	var tripletResults []string
-	for _, tc := range tripletCounts {
-		tripletResults = append(tripletResults, tc.NumTriplet)
-	}
-
 	matrixStr := strings.Join(matrix, "\n")
-	var tripletStr strings.Builder
-	for _, triplet := range tripletResults {
-		tripletStr.WriteString(triplet + "\n")
-	}
+
+	//var tripletCounts []struct {
+	//	NumTriplet   string `gorm:"column:num_triplet"`
+	//	TripletCount int    `gorm:"column:triplet_count"`
+	//}
+	//if err := s.db.Raw(`
+	//	SELECT num_triplet, triplet_count
+	//	FROM lottery_number_triplet_counts
+	//	WHERE triplet_count >= 1
+	//`).Scan(&tripletCounts).Error; err != nil {
+	//	return nil, err
+	//}
+	//
+	//var tripletResults []string
+	//for _, tc := range tripletCounts {
+	//	tripletResults = append(tripletResults, tc.NumTriplet)
+	//}
+	//
+	//var tripletStr strings.Builder
+	//for _, triplet := range tripletResults {
+	//	tripletStr.WriteString(triplet + "\n")
+	//}
 
 	return &dto.MatrixResponse{
 		Matrix: matrix,
-		Prompt: fmt.Sprintf(`你是一位顶级数学家和概率学家，擅长从复杂数据中识别隐藏规律。现在，你面对一个特殊的矩阵排列，其元素看似随机但实则遵循某种深层规律。
+		Prompt: fmt.Sprintf(`[%s] 作为一位在%d年代成长起来的数学天才，你现在是世界顶级数学家和概率学家，擅长从复杂数据中识别隐藏规律。今天，你需要以全新的视角来分析一个特殊的数字矩阵。
 
-		请仔细观察以下矩阵，并运用你的专业知识和洞察力，预测出其中的规律。这个矩阵每一行有五位，每一位都是0-9：
-
-		%s
-
-		历史上出现过的三定组合如下：
+		请以你独特的思维方式，仔细观察以下矩阵。这个矩阵的每一行都包含五个数字（0-9）：
 
 		%s
 
-		基于以上数据，请分析：
-		1. 矩阵中的数字排列规律
-		2. 算出问号中有可能出现的前三位的定组合
-		`, matrixStr, tripletStr.String()),
+
+
+		基于当前时间点[%s]的分析，请从以下几个方面进行思考：
+		1. 这个矩阵中蕴含着怎样独特的数字排列规律？
+		2. 根据你的专业判断，问号处最有可能出现的前三位定组合是什么？请确保给出具有唯一性的答案
+		3. 请跳出固有思维模式，提供一个全新的分析视角，不要受到任何历史分析的影响
+
+		注意：这是在%s时刻进行的分析，请确保你的回答反映当前时间点的独特见解。
+		`,
+			time.Now().Format("2006-01-02 15:04:05"),
+			rand.Intn(3)+198, // 随机生成年代：1980-1982
+			matrixStr,
+			//tripletStr.String(),
+			time.Now().Format("15:04:05"),
+			time.Now().Format("2006-01-02 15:04:05")),
 	}, nil
 }
 
@@ -204,4 +216,29 @@ func (s *LotteryService) GetRepeatNumbers() (*dto.RepeatNumbersResponse, error) 
 	})
 
 	return &response, nil
+}
+
+// reverseMatrix 翻转矩阵
+func reverseMatrix(matrix [][]string) [][]string {
+	// 获取矩阵的行数和列数
+	rows := len(matrix)
+	if rows == 0 {
+		return matrix
+	}
+	cols := len(matrix[0])
+
+	// 创建一个新的矩阵来存储翻转后的结果
+	reversed := make([][]string, cols)
+	for i := range reversed {
+		reversed[i] = make([]string, rows)
+	}
+
+	// 进行翻转操作
+	for i := 0; i < rows; i++ {
+		for j := 0; j < cols; j++ {
+			reversed[j][rows-1-i] = matrix[i][j]
+		}
+	}
+
+	return reversed
 }
